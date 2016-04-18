@@ -69,11 +69,19 @@ class TopicModel(Document):
     created_at = DateTimeField()
     read = IntField()
     replies = IntField()
+    node = ReferenceField(NodeModel)
 
     def isAuthor(self,username):
         return username == self.author.username
 
-def generate_gravatar_url(email,size):
-    import hashlib
-    root_url = "http://cn.gravatar.com/avatar/"
-    return root_url + hashlib.md5(email.lower()).hexdigest() + "?s=" + str(size)
+class NodeModel(Document):
+    name = StringField()
+    popularity = IntField()
+
+    @property
+    def topics(self):
+        return TopicModel.objects(tag=self)
+
+class Message(Document):
+    sender = ReferenceField(UserModel)
+    content = StringField()
