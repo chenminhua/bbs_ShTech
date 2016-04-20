@@ -1,3 +1,4 @@
+#coding:utf-8
 __author__ = 'chenminhua'
 
 from mongoengine import *
@@ -16,20 +17,25 @@ class UserModel(Document):
     avatar_url = StringField(required=True)
     likes = ListField(ReferenceField('TopicModel'))
     followings= ListField(ReferenceField('UserModel'))
+    birthday = DateTimeField()
+    activation = BooleanField(default=False)
 
     def save(self):
         if not self.avatar_url:
             self.generate_password()
             self.created_at = datetime.datetime.now()
             self.generate_gravatar_url(50)
-        try:
-            super(UserModel,self).save()
-            return True
-        except:
-            return False
+        #try:
+        super(UserModel,self).save()
+        return True
+        #except:
+        #    return False
 
     def generate_password(self):
         self.password = bcrypt.hashpw(str(self.password),bcrypt.gensalt(14))
+
+    def is_activated(self):
+        return self.activation
 
     def generate_gravatar_url(self,size):
         import hashlib
@@ -37,7 +43,12 @@ class UserModel(Document):
         self.avatar_url = root_url + hashlib.md5(self.email.lower()).hexdigest() + "?s=" + str(size)
 
     def checkPassword(self, password):
-        return self.password == bcrypt.hashpw(password, str(self.password))
+        return self.password == bcrypt.hashpw(str(password), str(self.password))
+
+    def changePassword(self, password):
+        self.password = str(password)
+        self.generate_password()
+        super(UserModel, self).save()
 
     @property
     def topics(self):
@@ -49,6 +60,9 @@ class UserModel(Document):
 
     def is_following(self,user):
         return user in self.followings
+
+    def is_liked(self,topic):
+        return topic in self.likes
 
     @property
     def followers(self):
@@ -69,19 +83,28 @@ class TopicModel(Document):
     created_at = DateTimeField()
     read = IntField()
     replies = IntField()
-    node = ReferenceField(NodeModel)
+    node = ReferenceField('Node')
+    replies = ListField(StringField())
 
-    def isAuthor(self,username):
-        return username == self.author.username
+    def isAuthor(self,u):
+        return u == self.author
 
-class NodeModel(Document):
-    name = StringField()
+class Node(Document):
+    #节点
+    name = StringField(unique=True)
+    label = StringField()
     popularity = IntField()
 
     @property
     def topics(self):
-        return TopicModel.objects(tag=self)
+        return TopicModel.objects(node=self)
 
 class Message(Document):
-    sender = ReferenceField(UserModel)
+    sender = ReferenceField('UserModel')
+    receiver = ReferenceField('UserModel')
     content = StringField()
+    sent_at = DateTimeField()
+    def save(self):
+        self.sent_at = datetime.datetime.now()
+        super(Message,self).save()
+
