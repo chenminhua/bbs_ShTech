@@ -19,9 +19,13 @@ from views.topic import topic_app
 from views.search import search_app
 from views.message import message_app
 from views.node import node_app
+from views.image import image_app
+from views.reply import reply_app
 
 app.register_blueprint(user_app)
 app.register_blueprint(topic_app)
 app.register_blueprint(search_app)
 app.register_blueprint(message_app)
 app.register_blueprint(node_app)
+app.register_blueprint(image_app)
+app.register_blueprint(reply_app)

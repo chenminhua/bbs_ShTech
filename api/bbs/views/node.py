@@ -6,7 +6,7 @@ node_app = Blueprint("node_app",__name__)
 @node_app.route('/node', methods=['POST'])
 def create():
     form = request.get_json()
-    node = Node(name=form['name'],label=form['label'],popularity=1)
+    node = Node(name=form['name'],label=form['label'],category=form['category'],popularity=1)
     node.save()
     return jsonify({"status":"ok"})
 
@@ -28,4 +28,8 @@ def get_nodes_topic(name):
 
 @node_app.route('/node', methods=['GET'])
 def get_nodes():
+    return jsonify(nodes=Node.objects())
+
+@node_app.route('/hotnode', methods=['GET'])
+def get_hotnode():
     return jsonify(nodes=Node.objects())

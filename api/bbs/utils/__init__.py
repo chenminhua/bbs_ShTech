@@ -11,7 +11,6 @@ from bbs.models import UserModel
 def jwt_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-
         token = request.headers["Authorization"][7:]
         if redisClient.get(token):             #如果已经注销了，就返回400,表示token错误
             return make_response("failure",400)
@@ -26,25 +25,39 @@ def jwt_required(func):
 
     return wrapper
 
+import os
 import smtplib
 from email.mime.text import MIMEText
+from bbs.configs import SMTP_CONFIG
+
+SMTPserver = SMTP_CONFIG['SMTPserver']
+sender = SMTP_CONFIG['sender']
+password = SMTP_CONFIG['password']
+
+def send(destination, msg):
+    mailserver = smtplib.SMTP(SMTPserver, 25)
+    mailserver.login(sender, password)
+    mailserver.sendmail(sender, [destination], msg.as_string())
+    mailserver.quit()
 
 def sendEmail(destination, token):
-    SMTPserver = 'smtp.163.com'
-    sender = '15651086913@163.com'
-    password = "xujiu0413"
     message = 'please click the link below to activate your account! \n'
     url = 'http://localhost:6677/user/activation/'+str(token)
     msg = MIMEText(message+url)
     msg['Subject'] = '上科大BBS注册账号激活'
     msg['From'] = sender
     msg['To'] = str(destination)
-    mailserver = smtplib.SMTP(SMTPserver, 25)
-    mailserver.login(sender, password)
-    mailserver.sendmail(sender, [destination], msg.as_string())
-    mailserver.quit()
-    print 'send email successfully'
+    send(destination, msg)
 
+def forgetPass(destination):
+    message = 'Your new password is: \n'
+    newpassword = ''.join(map(lambda xx:(hex(ord(xx))[2:]),os.urandom(3)))
+    msg = MIMEText(message+str(newpassword))
+    msg['Subject'] = '上科大BBS账号新密码'
+    msg['From'] = sender
+    msg['To'] = str(destination)
+    send(destination, msg)
+    return newpassword
 
 import re
 def Istechid(string):

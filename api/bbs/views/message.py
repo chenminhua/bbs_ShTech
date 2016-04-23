@@ -18,6 +18,7 @@ def send(name, u):
     message.sender = u
     message.receiver = other
     message.save()
+    other.update(push__unreadMessages=message)
     return "ok"
 
 ## get user's message
@@ -40,5 +41,17 @@ def get_message_with_someone(name,u):
     received_messages = Message.objects(receiver=u,sender=other)
     return jsonify(sent_messages=sent_messages,received_messages=received_messages)
 
+@message_app.route('/message/unread', methods=['GET'])
+@jwt_required
+def get_unreadmessage(u):
+    print u.unreadMessages
+    return jsonify(unreadMessages=u.unreadMessages)
 
+
+@message_app.route('/message/<messageid>', methods=['DELETE'])
+@jwt_required
+def delete_message(messageid,u):
+    message = Message.objects(id=messageid)[0]
+    u.update(pull__unreadMessages=message)
+    return make_response("delete complete", 200)
 

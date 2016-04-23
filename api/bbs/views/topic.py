@@ -1,7 +1,9 @@
+#coding:utf-8
 from flask import Blueprint, request, make_response, jsonify, json
 from bbs.models import TopicModel, Node
 from bbs.models import UserModel
 from bbs.utils import jwt_required
+from bbs import configs
 
 topic_app = Blueprint('topic_app', __name__)
 
@@ -14,11 +16,12 @@ def create(u):
         node = Node.objects(name=str(form['node']))[0]
     except:
         return make_response("no that node",400)
-    topic = TopicModel(title=str(form['title']),content=str(form['content']))
+    print type(form['title'])
+    topic = TopicModel(title=form['title'],content=form['content'])
     topic.node = node
     topic.author = u
 
-    topic.save()
+    topic.create()
     return make_response("create successfully",200)
 
 
@@ -40,19 +43,31 @@ def edit(topic_id,u):
 @topic_app.route('/topic/<topic_id>', methods=['DELETE'])
 @jwt_required
 def delete(topic_id,u):
-    topic = TopicModel.objects(id=topic_id)[0]
+    try:
+        topic = TopicModel.objects(id=topic_id)[0]
+    except:
+        return make_response("no that topic", 400)
     if topic.isAuthor(u):
         topic.delete()
         return make_response("delete successfully",200)
     else:
-        return make_response("delete failure",400)
+        return make_response("permission denied",400)
 
 ## get a topic
 @topic_app.route('/topic/<topic_id>', methods=['GET'])
 def get(topic_id):
     topic = TopicModel.objects(id=topic_id)[0]
-    return jsonify(topic=topic)
+    topic.read += 1
+    topic.save()
+    return jsonify(topic=topic.topicConvert())
 
+@topic_app.route('/recent', methods=['GET'])
+def get_recent():
+    page = int(request.args['page'])
+    #这里应该加上sortByLastEditTime
+    topics = TopicModel.objects().skip((page-1)*configs.TOPICS_IN_EVERYPAGE).limit(configs.TOPICS_IN_EVERYPAGE)
+    topics = [t.topicConvert() for t in topics]
+    return jsonify(topics=topics)
 
 
 
