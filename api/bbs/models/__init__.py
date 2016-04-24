@@ -88,7 +88,9 @@ class UserModel(Document):
             "username":self.username,"followers_count":self.followers_count,
             "followings_count":self.followings_count,"email":self.email,
             "description":self.description,"hobby":self.hobby,"topics_count":self.topics_count,
-            "likes_count":self.likes_count,"created_at":self.created_at
+            "likes_count":self.likes_count,"created_at":self.created_at,
+            "birthday":self.birthday.strftime("%Y-%m-%d"),"homeTown":self.homeTown,
+            "major":self.major, "nickname":self.nickname
         }
 
     def userConvert(self):
@@ -96,7 +98,9 @@ class UserModel(Document):
             "username":self.username,"avatar_url":self.avatar_url,"followers_count":self.followers_count,
             "followings_count":self.followings_count,"email":self.email,
             "description":self.description,"hobby":self.hobby,"topics_count":self.topics_count,
-            "likes_count":self.likes_count,"created_at":self.created_at
+            "likes_count":self.likes_count,"created_at":self.created_at,
+            "birthday":self.birthday.strftime("%Y-%m-%d"),"homeTown":self.homeTown,
+            "major":self.major, "nickname":self.nickname
         }
 
 class TopicModel(Document):
@@ -130,7 +134,7 @@ class TopicModel(Document):
 
 class Image(Document):
     uuid = StringField()
-    photo = FileField()
+    photo = ImageField(thumbnail_size=(50,50,True))
     title = StringField()
 
 class Node(Document):

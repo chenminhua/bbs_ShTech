@@ -10,22 +10,17 @@ from bbs.utils import jwt_required, sendEmail, forgetPass
 
 user_app = Blueprint('user_app', __name__)
 
-##register
+##用户注册
 @user_app.route('/user', methods=['POST'])
 def register():
     form = request.get_json()
-    #try:
     u = UserModel(nickname=form['nickname'],username=str(form['username']), password=str(form['password']), email=str(form['email']))
     if u.save():
-        print "test"
-        token = jwt.encode({'exp': configs.TOKEN_EXPIRATION, 'username': str(form['username'])}, configs.TOKEN_SECRET,
-                           algorithm='HS256')
+        token = jwt.encode({'exp': configs.TOKEN_EXPIRATION, 'username': str(form['username'])}, configs.TOKEN_SECRET, algorithm='HS256')
         sendEmail(str(u.email), token)
         return make_response("please activate your account", 200)
     else:
         return make_response('register failure', 400)  #用户名或邮箱不成功
-        # except:
-        #     return make_response('register failure',400)
 
 ##返回用户信息
 @user_app.route('/user', methods=['GET'])
@@ -33,6 +28,32 @@ def register():
 def get_yourself(u):
     return jsonify(user=u.userConvert())
 
+##修改user信息
+@user_app.route('/user', methods=['PUT'])
+@jwt_required
+def changeuserinformation(u):
+    form = request.get_json()
+    if form.has_key('nickname') and form['nickname']:
+        u.nickname = form['nickname']
+    if form.has_key('major') and form['major']:
+        u.major = form['major']
+    if form.has_key('homeTown') and form['homeTown']:
+        u.homeTown = form['homeTown']
+    if form.has_key('hobby') and form['hobby']:
+        u.hobby = form['hobby'].split(',')
+    if form.has_key('description') and form['description']:
+        u.description = form['description']
+    if form.has_key('birthday') and form['birthday']:
+        try:
+            u.birthday = datetime.datetime.strptime(form['birthday'], "%Y-%m-%d")
+        except:
+            make_response("the birthday format is invalid",400)
+    if form.has_key('avatar_url') and form['avatar_url']:
+        u.avatar_url = form['avatar_url']
+    u.save()
+    return make_response("change user information successfully!", 200)
+
+##修改密码
 @user_app.route('/user/forgetpass', methods=['POST'])
 def forgetpass():
     form = request.get_json()
@@ -43,7 +64,7 @@ def forgetpass():
     u.changePassword(forgetPass(form['email']))
     return make_response("Please check your email to get your new password")
 
-##signin
+##登录
 @user_app.route('/signin', methods=['POST'])
 def signin():
     form = request.get_json()
@@ -54,14 +75,12 @@ def signin():
     if not u.is_activated():
         return make_response("please activate first", 200)
     if u.checkPassword(str(form['password'])):
-        token = jwt.encode({'exp': configs.TOKEN_EXPIRATION, 'username': u.username}, configs.TOKEN_SECRET,
-                           algorithm='HS256')
+        token = jwt.encode({'exp': configs.TOKEN_EXPIRATION, 'username': u.username}, configs.TOKEN_SECRET, algorithm='HS256')
         return jsonify(token=token)  #登录成功则返回token,否则返回400
     else:
         return make_response('signin failure', 400)  #验证不成功
 
-
-##logout
+##注销
 @user_app.route('/user', methods=['DELETE'])
 def logout():
     try:
@@ -158,7 +177,6 @@ def get_followings(name):
     u = UserModel.objects(username=name)[0]
     return jsonify(followings=u.followings)
 
-
 ##获取某个用户的follower
 @user_app.route('/user/<name>/follower', methods=['GET'])
 def get_followers(name):
@@ -173,7 +191,6 @@ def get_user(name):
     u = UserModel.objects(username=name)[0]
     return jsonify(user=u, followingsCount=u.followings_count, followersCount=u.followers_count)
 
-
 @user_app.route('/user/password', methods=['PUT'])
 @jwt_required
 def changePass(u):
@@ -183,28 +200,6 @@ def changePass(u):
         return "ok"
     else:
         return make_response("old password wrong", 400)
-
-
-@user_app.route('/user', methods=['PUT'])
-@jwt_required
-def changeuserinformation(u):
-    form = request.get_json()
-    print form
-    if form['major'] != u'':
-        u.major = str(form['major'])
-    if form['hometown'] != u'':
-        u.howntown = str(form['hometown'])
-    if form['hobby'] != u'':
-        u.hobby = str(form['hobby']).split(',')
-    if form['description'] != u'':
-        u.description = str(form['description'])
-    if form['birthday'] != u'':
-        print form['birthday']
-        u.birthday = datetime.datetime.strptime(str(form['birthday']), "%Y-%m-%d")
-    print u.major
-    u.save()
-    return make_response("change user information successfully!", 200)
-
 
 @user_app.route('/user/activation/<token>', methods=['GET'])
 def activition(token):

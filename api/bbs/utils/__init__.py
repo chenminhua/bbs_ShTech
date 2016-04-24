@@ -11,10 +11,14 @@ from bbs.models import UserModel
 def jwt_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        token = request.headers["Authorization"][7:]
+        try:
+            token = request.headers["Authorization"][7:]
+        except:
+            return make_response("no valid token",400)
         if redisClient.get(token):             #如果已经注销了，就返回400,表示token错误
             return make_response("failure",400)
         username = jwt.decode(token, configs.TOKEN_SECRET)['username']
+        #print username
         try:
             u = UserModel.objects(username=username)[0]
         except:

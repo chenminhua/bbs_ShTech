@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, make_response, send_file
+from flask import Blueprint, request, make_response, send_file, jsonify
 from bbs.models import Image
 import shortuuid
 
@@ -15,16 +15,12 @@ def allowed_file(filename):
 
 @image_app.route('/image', methods=['POST'])
 def post():
-    print "fuck"
     file = request.files['file']
     if file and allowed_file(file.filename):
         img = Image()
-        img.uuid = shortuuid.ShortUUID().random(length=8)
-        img.title = file.filename
-        img.photo = file
+        img.uuid, img.title, img.photo = shortuuid.ShortUUID().random(length=8), file.filename, file
         img.save()
-        print img.uuid
-    return make_response("upload successfully",200)
+    return jsonify(uuid=img.uuid)
 
 @image_app.route('/image/<image_id>', methods=['GET'])
 def get(image_id):
@@ -32,5 +28,4 @@ def get(image_id):
         img = Image.objects(uuid=image_id)[0]
     except:
         return make_response("no that pic", 200)
-
-    return send_file(img.photo, mimetype='image/png')
+    return send_file(img.photo.thumbnail, mimetype='image/png')
