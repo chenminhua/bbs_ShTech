@@ -1,6 +1,7 @@
 #coding:utf-8
 from flask import Blueprint, request, make_response, jsonify, json
-from bbs.models import TopicModel, Node
+from bbs.models import Node
+from bbs.models import TopicModel
 from bbs.models import UserModel
 from bbs.utils import jwt_required
 from bbs import configs
@@ -21,8 +22,11 @@ def create(u):
     topic.node = node
     topic.author = u
 
+    node.popularity += 1
+    node.save()
     topic.create()
-    return make_response("create successfully",200)
+    return make_response(str(topic.id),200)
+
 
 
 ## edit a topic
@@ -34,10 +38,13 @@ def edit(topic_id,u):
         form = request.get_json()
         topic.content = form['content']
         topic.title = form['title']
+        topic.updateLastEditedTime()
         topic.save()
-        return make_response("edit successfully",200)
+        return make_response(str(topic.id),200)
     else:
         return make_response("not owner",400)
+
+
 
 ## delete a topic
 @topic_app.route('/topic/<topic_id>', methods=['DELETE'])
@@ -53,21 +60,41 @@ def delete(topic_id,u):
     else:
         return make_response("permission denied",400)
 
+
+
 ## get a topic
 @topic_app.route('/topic/<topic_id>', methods=['GET'])
 def get(topic_id):
+    username = request.headers['Username'] if request.headers.has_key('Username') else "";
     topic = TopicModel.objects(id=topic_id)[0]
     topic.read += 1
     topic.save()
-    return jsonify(topic=topic.topicConvert())
+    topic_rest = topic.getTopicAndReply()
+    if username:
+        u = UserModel.objects(username=username)[0]
+        topic_rest["isAuthor"] = topic.isAuthor(u)
+        topic_rest["isLiked"] = topic.isLiked(u)
+    return jsonify(topic=topic_rest)
 
 @topic_app.route('/recent', methods=['GET'])
 def get_recent():
-    page = int(request.args['page'])
+    try:
+        page = int(request.args['page'])
+    except:
+        page = 1
+
     #这里应该加上sortByLastEditTime
-    topics = TopicModel.objects().skip((page-1)*configs.TOPICS_IN_EVERYPAGE).limit(configs.TOPICS_IN_EVERYPAGE)
+    topics = TopicModel.objects.order_by('-lastEdited_at').skip((page-1)*configs.TOPICS_IN_EVERYPAGE).limit(configs.TOPICS_IN_EVERYPAGE)
     topics = [t.topicConvert() for t in topics]
     return jsonify(topics=topics)
 
-
-
+@topic_app.route('/timeline',methods=['GET'])
+@jwt_required
+def get_timeline(u):
+    try:
+        page = int(request.args['page'])
+    except:
+        page = 1
+    topics = TopicModel.objects(author__in=u.followings).order_by('-lastEdited_at').skip((page-1)*configs.TOPICS_IN_EVERYPAGE).limit(configs.TOPICS_IN_EVERYPAGE)
+    topics = [t.topicConvert() for t in topics]
+    return jsonify(topics=topics)

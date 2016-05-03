@@ -1,5 +1,7 @@
+#coding:utf-8
 from flask import request,Blueprint, jsonify, json, make_response
 from bbs.models import Node
+from bbs import configs
 
 node_app = Blueprint("node_app",__name__)
 
@@ -21,15 +23,23 @@ def delete(name):
 @node_app.route('/node/<name>', methods=['GET'])
 def get_nodes_topic(name):
     try:
+        page = int(request.args['page'])
+    except:
+        page = 1
+    try:
         node = Node.objects(name=name)[0]
     except:
         return make_response("no this topic", 400)
-    return jsonify(topics=node.topics())
+    topics = node.topics.order_by('-lastEdited_at').skip((page-1)*configs.TOPICS_IN_EVERYPAGE).limit(configs.TOPICS_IN_EVERYPAGE)
+    topics = [t.topicConvert() for t in topics]
+    return jsonify(topics=topics)
 
+#返回全部node
 @node_app.route('/node', methods=['GET'])
 def get_nodes():
-    return jsonify(nodes=Node.objects())
+    categories = []
+    for node in Node.objects:
+        if node["category"] not in categories:
+            categories.append(node["category"])
+    return jsonify(nodes=Node.objects().order_by('-popularity'),categories=categories)
 
-@node_app.route('/hotnode', methods=['GET'])
-def get_hotnode():
-    return jsonify(nodes=Node.objects())

@@ -7,10 +7,11 @@ search_app = Blueprint('search_app',__name__)
 
 ##查询snippet
 @search_app.route('/search/topic', methods=['GET'])
-def search_snippet():
+def search_topic():
     try:
         q = request.args['q']
         topics = TopicModel.objects(title__contains=q)
+        topics = [t.topicConvert() for t in topics]
         return jsonify(topics=topics)
     except:
         return make_response("error",400)
